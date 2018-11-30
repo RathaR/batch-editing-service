@@ -5,7 +5,7 @@ const axios = require('axios');
 const port = process.env.PORT || 8080;
 
 ///TODO: read params from path
-///TODO: implement retry
+///TODO: fix retry implementation
 ///TODO: implement request throttling via queue
 
 /*
@@ -38,7 +38,14 @@ app.post('/batch', async (req, res) => {
 
     const invocationResults = await Promise.all(requests.map(p => p.catch((e)=> e)));
 
-    const response = invocationResults.map((invocationResult) => {
+    const retriesConfigs = invocationResults.filter(item => item instanceof Error).map(item => item.config);
+
+    const retriesRequests = retriesConfigs.map(axios);
+    const retryResults = await Promise.all(retriesRequests.map(p => p.catch((e)=> e)));
+
+    const finalResults = retryResults.concat(invocationResults.filter(item => !(item instanceof Error)));
+
+    const response = finalResults.map((invocationResult) => {
         const url = invocationResult.config.url;
         return {
             url,
